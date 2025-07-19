@@ -1,21 +1,26 @@
-def calculator():
-    print("Простой калькулятор")
-    a = float(input("Введите первое число: "))
-    b = float(input("Введите второе число: "))
-    operation = input("Выберите операцию (+, -, *, /): ")
+import streamlit as st
+import calendar
 
-    if operation == "+":
-        print(f"Результат: {a + b}")
-    elif operation == "-":
-        print(f"Результат: {a - b}")
-    elif operation == "*":
-        print(f"Результат: {a * b}")
-    elif operation == "/":
-        if b != 0:
-            print(f"Результат: {a / b}")
-        else:
-            print("Ошибка: деление на ноль")
-    else:
-        print("Неизвестная операция")
+def print_year_calendar(year):
+    result = ""
+    for month in range(1, 13):
+        result += calendar.month(year, month) + "\n"
+        result += "-" * 20 + "\n"
+    return result
 
-calculator()
+def print_month_calendar(year, month):
+    return calendar.month(year, month)
+
+# --- UI ---
+st.title("📅 Календарь на 2025 год")
+
+option = st.radio("Что показать?", ["Весь год", "Один месяц"])
+
+year = 2025
+
+if option == "Весь год":
+    st.text(print_year_calendar(year))
+
+elif option == "Один месяц":
+    month = st.selectbox("Выберите месяц", list(range(1, 13)))
+    st.text(print_month_calendar(year, month))
