@@ -1,361 +1,402 @@
 import streamlit as st
-import calendar
-from datetime import datetime, date
-import random
+from datetime import datetime
+import json
 
 # Настройка страницы
 st.set_page_config(
-    page_title="Календарь 2025",
-    page_icon="📅",
+    page_title="📝 Список задач",
+    page_icon="✅",
     layout="wide"
 )
 
 # Инициализация состояния
-if 'selected_date' not in st.session_state:
-    st.session_state.selected_date = None
+if 'tasks' not in st.session_state:
+    st.session_state.tasks = []
+if 'completed_tasks' not in st.session_state:
+    st.session_state.completed_tasks = []
 
-# Простые CSS стили
+# CSS стили для красивого дизайна
 st.markdown("""
 <style>
-    .calendar-header {
-        background-color: #1a1a1a;
-        color: #00ff00;
-        padding: 1rem;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
         text-align: center;
-        border: 2px solid #00ff00;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .main-header p {
+        margin: 1rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .task-input-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        border: 2px solid #f0f0f0;
+    }
+    
+    .task-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
         margin-bottom: 1rem;
-        font-family: monospace;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+        transition: all 0.3s ease;
     }
     
-    .calendar-container {
-        background-color: #000;
-        border: 2px solid #00ff00;
-        padding: 1rem;
-        margin: 1rem 0;
+    .task-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
     }
     
-    .month-title {
-        background-color: #00ff00;
-        color: #000;
-        padding: 0.5rem;
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 1rem;
-        font-family: monospace;
+    .task-item.completed {
+        border-left-color: #28a745;
+        opacity: 0.7;
+        background: #f8f9fa;
     }
     
-    .weekday-header {
-        background-color: #333;
-        color: #00ff00;
-        padding: 0.5rem;
-        text-align: center;
-        font-weight: bold;
-        border: 1px solid #00ff00;
-        font-family: monospace;
+    .task-item.completed .task-text {
+        text-decoration: line-through;
+        color: #6c757d;
     }
     
-    .calendar-day {
-        background-color: #1a1a1a;
-        color: #00ff00;
-        padding: 0.5rem;
-        text-align: center;
-        border: 1px solid #00ff00;
-        font-family: monospace;
-        min-height: 60px;
+    .task-text {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin: 0;
+        color: #2c3e50;
     }
     
-    .calendar-day:hover {
-        background-color: #00ff00;
-        color: #000;
-    }
-    
-    .today {
-        background-color: #00ff00 !important;
-        color: #000 !important;
-        font-weight: bold;
-    }
-    
-    .holiday {
-        background-color: #ff0000 !important;
-        color: #fff !important;
-        font-weight: bold;
-    }
-    
-    .weekend {
-        color: #0080ff !important;
-    }
-    
-    .other-month {
-        color: #666;
-        background-color: #0a0a0a;
-        border: 1px solid #333;
+    .task-meta {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
     }
     
     .stats-container {
-        background-color: #1a1a1a;
-        border: 2px solid #00ff00;
-        padding: 1rem;
-        margin-top: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
     }
     
     .stat-item {
-        background-color: #000;
-        border: 1px solid #00ff00;
-        padding: 0.5rem;
-        text-align: center;
-        margin: 0.5rem;
+        background: rgba(255,255,255,0.2);
+        padding: 1.5rem;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .stat-item h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+    }
+    
+    .stat-item p {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .priority-high {
+        border-left-color: #dc3545 !important;
+    }
+    
+    .priority-medium {
+        border-left-color: #ffc107 !important;
+    }
+    
+    .priority-low {
+        border-left-color: #28a745 !important;
+    }
+    
+    .delete-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+    
+    .delete-btn:hover {
+        background: #c82333;
+        transform: scale(1.05);
+    }
+    
+    .add-btn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .add-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .clear-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+    
+    .clear-btn:hover {
+        background: #5a6268;
+    }
+    
+    .section-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .section-header h2 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.3rem;
+    }
+    
+    @media (max-width: 768px) {
+        .main-header h1 {
+            font-size: 2rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
-def get_holidays(year, month):
-    """Возвращает список праздников для месяца"""
-    holidays = {
-        1: [1, 7],  # Новый год, Рождество
-        2: [23],    # День защитника Отечества
-        3: [8],     # Международный женский день
-        5: [1, 9],  # День труда, День Победы
-        6: [12],    # День России
-        11: [4],    # День народного единства
-        12: [31]    # Новый год
-    }
-    return holidays.get(month, [])
+def add_task(task_text, priority="medium"):
+    """Добавляет новую задачу"""
+    if task_text.strip():
+        task = {
+            'id': len(st.session_state.tasks) + len(st.session_state.completed_tasks) + 1,
+            'text': task_text.strip(),
+            'priority': priority,
+            'created_at': datetime.now().strftime("%d.%m.%Y %H:%M"),
+            'completed_at': None
+        }
+        st.session_state.tasks.append(task)
+        return True
+    return False
 
-def get_lunar_phase(day):
-    """Возвращает фазу луны для дня"""
-    phases = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
-    return phases[day % 8]
+def complete_task(task_id):
+    """Отмечает задачу как выполненную"""
+    for task in st.session_state.tasks:
+        if task['id'] == task_id:
+            task['completed_at'] = datetime.now().strftime("%d.%m.%Y %H:%M")
+            st.session_state.completed_tasks.append(task)
+            st.session_state.tasks.remove(task)
+            break
 
-def get_weather_icon(day):
-    """Возвращает иконку погоды"""
-    weather = ["☀️", "⛅", "🌤️", "🌥️", "☁️", "🌦️", "🌧️", "⛈️"]
-    return weather[day % len(weather)]
+def delete_task(task_id, from_completed=False):
+    """Удаляет задачу"""
+    if from_completed:
+        st.session_state.completed_tasks = [t for t in st.session_state.completed_tasks if t['id'] != task_id]
+    else:
+        st.session_state.tasks = [t for t in st.session_state.tasks if t['id'] != task_id]
 
-def get_zodiac_sign(month, day):
-    """Возвращает знак зодиака"""
-    zodiac_signs = [
-        (1, 20, "♒"), (2, 19, "♓"), (3, 21, "♈"),
-        (4, 20, "♉"), (5, 21, "♊"), (6, 21, "♋"),
-        (7, 23, "♌"), (8, 23, "♍"), (9, 23, "♎"),
-        (10, 23, "♏"), (11, 22, "♐"), (12, 22, "♑")
-    ]
-    
-    for i, (start_month, start_day, sign) in enumerate(zodiac_signs):
-        next_month, next_day, _ = zodiac_signs[(i + 1) % 12]
-        if (month == start_month and day >= start_day) or (month == next_month and day < next_day):
-            return sign
-    return "♑"
-
-def display_month_calendar(year, month):
-    """Отображает календарь месяца используя Streamlit компоненты"""
-    cal = calendar.monthcalendar(year, month)
-    month_name = calendar.month_name[month]
-    holidays = get_holidays(year, month)
-    today = datetime.now()
-    
-    # Заголовок месяца
-    st.markdown(f"""
-    <div class="month-title">
-        {month_name} {year}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Дни недели
-    weekdays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
-    cols = st.columns(7)
-    
-    for i, day in enumerate(weekdays):
-        with cols[i]:
-            st.markdown(f"""
-            <div class="weekday-header">
-                {day}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Дни месяца
-    for week in cal:
-        cols = st.columns(7)
-        for i, day in enumerate(week):
-            with cols[i]:
-                if day == 0:
-                    st.markdown('<div class="calendar-day other-month"></div>', unsafe_allow_html=True)
-                else:
-                    # Определяем классы для дня
-                    day_classes = ["calendar-day"]
-                    
-                    if year == today.year and month == today.month and day == today.day:
-                        day_classes.append("today")
-                    
-                    if day in holidays:
-                        day_classes.append("holiday")
-                    
-                    weekday = date(year, month, day).weekday()
-                    if weekday >= 5:
-                        day_classes.append("weekend")
-                    
-                    class_str = " ".join(day_classes)
-                    
-                    # Иконки
-                    lunar_phase = get_lunar_phase(day)
-                    weather_icon = get_weather_icon(day)
-                    zodiac_sign = get_zodiac_sign(month, day)
-                    
-                    st.markdown(f"""
-                    <div class="{class_str}">
-                        <div style="font-size: 1.2rem; font-weight: bold;">{day}</div>
-                        <div style="font-size: 0.8rem;">{lunar_phase}</div>
-                        <div style="font-size: 0.8rem;">{weather_icon}</div>
-                        <div style="font-size: 0.7rem;">{zodiac_sign}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+def clear_completed_tasks():
+    """Очищает все выполненные задачи"""
+    st.session_state.completed_tasks = []
 
 # Главный заголовок
 st.markdown("""
-<div class="calendar-header">
-    <h1>📅 КАЛЕНДАРЬ 2025 - PIXEL EDITION</h1>
-    <p>Минималистичный календарь в стиле ретро</p>
+<div class="main-header">
+    <h1>📝 Список задач</h1>
+    <p>Организуйте свои дела и отслеживайте прогресс</p>
 </div>
 """, unsafe_allow_html=True)
-
-# Панель управления
-col1, col2 = st.columns([3, 1])
-
-with col1:
-    option = st.radio("Что показать?", ["Весь год", "Один месяц"])
-
-with col2:
-    if st.button("🎲 Случайный месяц"):
-        random_month = random.randint(1, 12)
-        st.session_state.random_month = random_month
-
-year = 2025
-
-# Отображение календаря
-if option == "Весь год":
-    for month in range(1, 13):
-        st.markdown('<div class="calendar-container">', unsafe_allow_html=True)
-        display_month_calendar(year, month)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-elif option == "Один месяц":
-    # Исправляем проблему с индексом
-    random_month_index = getattr(st.session_state, 'random_month', 1) - 1
-    # Убеждаемся, что индекс в допустимых пределах
-    random_month_index = max(0, min(11, random_month_index))
-    
-    month = st.selectbox("Выберите месяц", 
-                        list(range(1, 13)), 
-                        format_func=lambda x: calendar.month_name[x],
-                        index=random_month_index)
-    
-    st.markdown('<div class="calendar-container">', unsafe_allow_html=True)
-    display_month_calendar(year, month)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # Статистика
+total_tasks = len(st.session_state.tasks) + len(st.session_state.completed_tasks)
+completed_count = len(st.session_state.completed_tasks)
+pending_count = len(st.session_state.tasks)
+completion_rate = (completed_count / total_tasks * 100) if total_tasks > 0 else 0
+
 st.markdown("""
 <div class="stats-container">
-    <h3 style="color: #00ff00; text-align: center;">📊 СТАТИСТИКА 2025</h3>
+    <h2>📊 Статистика</h2>
+    <div class="stats-grid">
+        <div class="stat-item">
+            <h3>Всего задач</h3>
+            <p>{}</p>
+        </div>
+        <div class="stat-item">
+            <h3>Выполнено</h3>
+            <p>{}</p>
+        </div>
+        <div class="stat-item">
+            <h3>В процессе</h3>
+            <p>{}</p>
+        </div>
+        <div class="stat-item">
+            <h3>Прогресс</h3>
+            <p>{:.1f}%</p>
+        </div>
+    </div>
 </div>
-""", unsafe_allow_html=True)
+""".format(total_tasks, completed_count, pending_count, completion_rate), unsafe_allow_html=True)
 
+# Добавление новой задачи
+st.markdown('<div class="task-input-container">', unsafe_allow_html=True)
+st.markdown("### ➕ Добавить новую задачу")
+
+col1, col2, col3 = st.columns([3, 1, 1])
+
+with col1:
+    new_task = st.text_input("Введите задачу:", placeholder="Например: Сделать покупки", key="new_task_input")
+
+with col2:
+    priority = st.selectbox("Приоритет:", ["Низкий", "Средний", "Высокий"], key="priority_select")
+
+with col3:
+    if st.button("➕ Добавить", key="add_task_btn", use_container_width=True):
+        priority_map = {"Низкий": "low", "Средний": "medium", "Высокий": "high"}
+        if add_task(new_task, priority_map[priority]):
+            st.success("✅ Задача добавлена!")
+            st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Текущие задачи
+if st.session_state.tasks:
+    st.markdown('<div class="section-header">', unsafe_allow_html=True)
+    st.markdown("### 🔄 Текущие задачи")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    for task in st.session_state.tasks:
+        col1, col2, col3 = st.columns([4, 1, 1])
+        
+        with col1:
+            priority_class = f"priority-{task['priority']}"
+            st.markdown(f"""
+            <div class="task-item {priority_class}">
+                <p class="task-text">{task['text']}</p>
+                <p class="task-meta">📅 Создано: {task['created_at']} | 🎯 Приоритет: {task['priority'].title()}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("✅", key=f"complete_{task['id']}", help="Отметить как выполненную"):
+                complete_task(task['id'])
+                st.success("🎉 Задача выполнена!")
+                st.rerun()
+        
+        with col3:
+            if st.button("🗑️", key=f"delete_{task['id']}", help="Удалить задачу"):
+                delete_task(task['id'])
+                st.success("🗑️ Задача удалена!")
+                st.rerun()
+else:
+    st.info("📝 У вас пока нет активных задач. Добавьте первую задачу выше!")
+
+# Выполненные задачи
+if st.session_state.completed_tasks:
+    st.markdown('<div class="section-header">', unsafe_allow_html=True)
+    st.markdown("### ✅ Выполненные задачи")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([5, 1])
+    
+    with col1:
+        for task in st.session_state.completed_tasks:
+            st.markdown(f"""
+            <div class="task-item completed">
+                <p class="task-text">{task['text']}</p>
+                <p class="task-meta">📅 Создано: {task['created_at']} | ✅ Выполнено: {task['completed_at']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        if st.button("🗑️ Очистить все", key="clear_completed", help="Удалить все выполненные задачи"):
+            clear_completed_tasks()
+            st.success("🗑️ Все выполненные задачи удалены!")
+            st.rerun()
+
+# Дополнительные функции
+st.markdown("---")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">📅 Дней</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">365</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">🎯 Год</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">2025</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button("🔄 Обновить", key="refresh_btn"):
+        st.rerun()
 
 with col2:
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">🎉 Праздники</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">8</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">🌙 Фазы луны</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">12</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button("📊 Экспорт", key="export_btn"):
+        tasks_data = {
+            'active_tasks': st.session_state.tasks,
+            'completed_tasks': st.session_state.completed_tasks,
+            'export_date': datetime.now().strftime("%d.%m.%Y %H:%M")
+        }
+        st.download_button(
+            label="📥 Скачать JSON",
+            data=json.dumps(tasks_data, ensure_ascii=False, indent=2),
+            file_name=f"tasks_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
+        )
 
 with col3:
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">🌤️ Погода</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">365</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="stat-item">
-        <h4 style="color: #00ff00;">♈ Знаки зодиака</h4>
-        <p style="color: #fff; font-size: 1.5rem; font-weight: bold;">12</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button("🗑️ Очистить все", key="clear_all_btn"):
+        st.session_state.tasks = []
+        st.session_state.completed_tasks = []
+        st.success("🗑️ Все задачи удалены!")
+        st.rerun()
 
-# Легенда
+# Подсказки
+st.markdown("---")
+st.markdown("### 💡 Подсказки:")
 st.markdown("""
-<div class="stats-container">
-    <h4 style="color: #00ff00;">🎨 ЛЕГЕНДА</h4>
-</div>
-""", unsafe_allow_html=True)
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    st.markdown("""
-    <div class="stat-item">
-        <div style="background: #00ff00; width: 20px; height: 20px; margin: 0 auto;"></div>
-        <p style="color: #00ff00; text-align: center;">🎯 Сегодня</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="stat-item">
-        <div style="background: #ff0000; width: 20px; height: 20px; margin: 0 auto;"></div>
-        <p style="color: #00ff00; text-align: center;">🎉 Праздники</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div class="stat-item">
-        <div style="background: #0080ff; width: 20px; height: 20px; margin: 0 auto;"></div>
-        <p style="color: #00ff00; text-align: center;">🌅 Выходные</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    st.markdown("""
-    <div class="stat-item">
-        <div style="background: #1a1a1a; width: 20px; height: 20px; margin: 0 auto; border: 1px solid #00ff00;"></div>
-        <p style="color: #00ff00; text-align: center;">📅 Обычные дни</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col5:
-    st.markdown("""
-    <div class="stat-item">
-        <div style="background: #ff0000; width: 20px; height: 20px; margin: 0 auto;"></div>
-        <p style="color: #00ff00; text-align: center;">🎯 Выбранный</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Информация
-st.success("✅ Календарь загружен!")
-st.info("🎮 Пиксельный стиль готов к работе")
-
+- **Приоритеты**: Высокий (красный), Средний (желтый), Низкий (зеленый)
+- **Статистика**: Отслеживайте свой прогресс в реальном времени
+- **Экспорт**: Сохраните свои задачи в JSON файл
+- **Очистка**: Удалите выполненные задачи одним кликом
+""")
