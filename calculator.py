@@ -1,8 +1,7 @@
 import streamlit as st
 import calendar
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import random
-import json
 
 # Настройка страницы
 st.set_page_config(
@@ -12,696 +11,256 @@ st.set_page_config(
 )
 
 # Инициализация состояния
-if 'dark_mode' not in st.session_state:
-    st.session_state.dark_mode = False
 if 'selected_date' not in st.session_state:
     st.session_state.selected_date = None
-if 'particle_mode' not in st.session_state:
-    st.session_state.particle_mode = True
-if 'sound_enabled' not in st.session_state:
-    st.session_state.sound_enabled = True
-if 'holographic_mode' not in st.session_state:
-    st.session_state.holographic_mode = False
-if 'zen_mode' not in st.session_state:
-    st.session_state.zen_mode = False
 
-# CSS стили для супер-красивого дизайна
+# Минималистичные CSS стили
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
     
     * {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    body {
-        overflow-x: hidden;
-    }
-    
-    /* 3D и голографические эффекты */
-    .holographic {
-        background: linear-gradient(45deg, 
-            rgba(255,255,255,0.1), 
-            rgba(255,255,255,0.05), 
-            rgba(255,255,255,0.1));
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 
-            0 0 20px rgba(0,255,255,0.3),
-            inset 0 0 20px rgba(0,255,255,0.1);
-    }
-    
-    .zen-mode {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        color: #2c3e50;
-    }
-    
-    .zen-mode .calendar-container {
-        background: rgba(255,255,255,0.9);
-        border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    
-    .dark-mode {
-        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-        color: #ffffff;
-    }
-    
-    .dark-mode .calendar-container {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .dark-mode .calendar-day {
-        background: linear-gradient(145deg, #2a2a3e, #1e1e2e);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .dark-mode .calendar-day:hover {
-        background: linear-gradient(145deg, #667eea, #764ba2);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-    }
-    
-    /* Частицы */
-    .particles {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: -1;
-    }
-    
-    .particle {
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border-radius: 50%;
-        animation: float-particle 6s infinite linear;
-    }
-    
-    @keyframes float-particle {
-        0% {
-            transform: translateY(100vh) rotate(0deg);
-            opacity: 0;
-        }
-        10% {
-            opacity: 1;
-        }
-        90% {
-            opacity: 1;
-        }
-        100% {
-            transform: translateY(-100px) rotate(360deg);
-            opacity: 0;
-        }
-    }
-    
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-        padding: 4rem 2rem;
-        border-radius: 30px;
-        margin-bottom: 2rem;
-        text-align: center;
-        color: white;
-        box-shadow: 
-            0 30px 60px rgba(102, 126, 234, 0.4),
-            0 0 100px rgba(102, 126, 234, 0.2);
-        position: relative;
-        overflow: hidden;
-        animation: float 8s ease-in-out infinite;
-    }
-    
-    .main-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="50" r="0.8" fill="white" opacity="0.1"/><circle cx="90" cy="30" r="0.3" fill="white" opacity="0.1"/><circle cx="40" cy="80" r="0.6" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-        pointer-events: none;
-    }
-    
-    .main-header::after {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.15), transparent);
-        transform: rotate(45deg);
-        animation: shimmer 5s infinite;
-    }
-    
-    .main-header h1 {
-        font-size: 4rem;
-        font-weight: 900;
-        margin: 0;
-        text-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        animation: fadeInUp 2s ease-out;
-        background: linear-gradient(45deg, #ffffff, #f0f0f0, #ffffff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-family: 'Orbitron', monospace;
-        letter-spacing: 3px;
-    }
-    
-    .main-header p {
-        font-size: 1.5rem;
-        margin: 1.5rem 0 0 0;
-        opacity: 0.95;
-        animation: fadeInUp 2s ease-out 0.4s both;
-        font-weight: 300;
         font-family: 'JetBrains Mono', monospace;
     }
     
-    .controls-container {
-        background: linear-gradient(145deg, #ffffff, #f8f9fa);
-        padding: 2.5rem;
-        border-radius: 25px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-        border: 1px solid rgba(102, 126, 234, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .controls-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-        transition: left 0.8s;
-    }
-    
-    .controls-container:hover::before {
-        left: 100%;
-    }
-    
-    .dark-mode .controls-container {
-        background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .control-button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        padding: 1rem 2rem;
-        border-radius: 30px;
-        color: white;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-        position: relative;
-        overflow: hidden;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    .control-button::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.5s;
-    }
-    
-    .control-button:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5);
-    }
-    
-    .control-button:hover::before {
-        left: 100%;
-    }
-    
-    .calendar-container {
-        background: white;
-        border-radius: 30px;
-        padding: 3rem;
-        box-shadow: 
-            0 25px 50px rgba(0,0,0,0.1),
-            0 0 100px rgba(102, 126, 234, 0.1);
-        margin: 2.5rem 0;
-        border: 1px solid rgba(255,255,255,0.2);
-        backdrop-filter: blur(20px);
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .calendar-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 6px;
-        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #667eea);
-        border-radius: 30px 30px 0 0;
-        background-size: 200% 100%;
-        animation: gradient-shift 3s ease-in-out infinite;
-    }
-    
-    .calendar-container:hover {
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 
-            0 40px 80px rgba(0,0,0,0.15),
-            0 0 150px rgba(102, 126, 234, 0.2);
-    }
-    
-    .month-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2.5rem;
-        border-radius: 25px;
+    .pixel-header {
+        background: #1a1a1a;
+        color: #00ff00;
+        padding: 2rem;
         text-align: center;
-        font-weight: 700;
-        margin-bottom: 2.5rem;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        border: 3px solid #00ff00;
+        margin-bottom: 2rem;
+        box-shadow: 5px 5px 0px #00ff00;
     }
     
-    .month-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.15), transparent);
-        transform: rotate(45deg);
-        animation: shimmer 4s infinite;
-    }
-    
-    .month-header h2 {
-        margin: 0;
+    .pixel-header h1 {
         font-size: 2.5rem;
-        position: relative;
-        z-index: 1;
-        text-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        font-family: 'Orbitron', monospace;
-        letter-spacing: 2px;
+        margin: 0;
+        text-shadow: 2px 2px 0px #000;
     }
     
-    .calendar-grid {
+    .pixel-header p {
+        font-size: 1rem;
+        margin: 1rem 0 0 0;
+        opacity: 0.8;
+    }
+    
+    .pixel-container {
+        background: #000;
+        border: 2px solid #00ff00;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 3px 3px 0px #00ff00;
+    }
+    
+    .pixel-month-header {
+        background: #00ff00;
+        color: #000;
+        padding: 1rem;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        border: 2px solid #000;
+        margin-bottom: 1rem;
+    }
+    
+    .pixel-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 12px;
-        margin-top: 2rem;
+        gap: 2px;
+        margin-top: 1rem;
     }
     
-    .calendar-day {
-        background: linear-gradient(145deg, #f8f9fa, #e9ecef);
-        padding: 1.5rem 0.5rem;
+    .pixel-day {
+        background: #1a1a1a;
+        color: #00ff00;
+        padding: 0.8rem 0.5rem;
         text-align: center;
-        border-radius: 20px;
-        border: 2px solid transparent;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #00ff00;
         cursor: pointer;
-        position: relative;
-        overflow: hidden;
-        font-weight: 700;
-        min-height: 80px;
+        font-weight: 500;
+        min-height: 60px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .pixel-day:hover {
+        background: #00ff00;
+        color: #000;
+        transform: scale(1.05);
+    }
+    
+    .pixel-day.selected {
+        background: #ff0000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+    
+    .pixel-weekday {
+        background: #333;
+        color: #00ff00;
+        padding: 0.8rem 0.5rem;
+        text-align: center;
+        font-weight: bold;
+        border: 1px solid #00ff00;
+        font-size: 0.9rem;
+    }
+    
+    .pixel-today {
+        background: #00ff00;
+        color: #000;
+        font-weight: bold;
+        border: 2px solid #fff;
+    }
+    
+    .pixel-holiday {
+        background: #ff0000;
+        color: #fff;
+        font-weight: bold;
+    }
+    
+    .pixel-weekend {
+        background: #1a1a1a;
+        color: #0080ff;
+        border: 1px solid #0080ff;
+    }
+    
+    .pixel-other-month {
+        color: #666;
+        background: #0a0a0a;
+        border: 1px solid #333;
+    }
+    
+    .pixel-controls {
+        background: #1a1a1a;
+        border: 2px solid #00ff00;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 3px 3px 0px #00ff00;
+    }
+    
+    .pixel-stats {
+        background: #1a1a1a;
+        border: 2px solid #00ff00;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 3px 3px 0px #00ff00;
+    }
+    
+    .pixel-stats h3 {
+        color: #00ff00;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+    }
+    
+    .pixel-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .pixel-stat-item {
+        background: #000;
+        border: 1px solid #00ff00;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .pixel-stat-item h4 {
+        color: #00ff00;
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+    }
+    
+    .pixel-stat-item p {
+        color: #fff;
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    
+    .pixel-legend {
+        background: #1a1a1a;
+        border: 2px solid #00ff00;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        box-shadow: 3px 3px 0px #00ff00;
+    }
+    
+    .pixel-legend h4 {
+        color: #00ff00;
+        margin-bottom: 1rem;
         font-size: 1.2rem;
     }
     
-    .calendar-day:hover {
-        background: linear-gradient(145deg, #667eea, #764ba2);
-        color: white;
-        transform: translateY(-8px) scale(1.1);
-        box-shadow: 
-            0 20px 40px rgba(102, 126, 234, 0.6),
-            0 0 50px rgba(102, 126, 234, 0.3);
-        border-color: rgba(255,255,255,0.4);
-        z-index: 10;
-    }
-    
-    .calendar-day::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-        transition: left 0.8s;
-    }
-    
-    .calendar-day:hover::before {
-        left: 100%;
-    }
-    
-    .calendar-day.selected {
-        background: linear-gradient(145deg, #ff6b6b, #ee5a24) !important;
-        color: white !important;
-        transform: scale(1.15);
-        box-shadow: 
-            0 25px 50px rgba(255, 107, 107, 0.6),
-            0 0 60px rgba(255, 107, 107, 0.4) !important;
-        animation: bounce 0.8s ease-in-out;
-    }
-    
-    .weekday-header {
-        background: linear-gradient(135deg, #495057, #343a40);
-        color: white;
-        padding: 1.5rem 0.5rem;
-        text-align: center;
-        border-radius: 20px;
-        font-weight: 800;
-        font-size: 1.1rem;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        box-shadow: 0 12px 25px rgba(0,0,0,0.3);
-        position: relative;
-        overflow: hidden;
-        font-family: 'Orbitron', monospace;
-    }
-    
-    .weekday-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.6s;
-    }
-    
-    .weekday-header:hover::before {
-        left: 100%;
-    }
-    
-    .today {
-        background: linear-gradient(145deg, #28a745, #20c997) !important;
-        color: white !important;
-        font-weight: bold !important;
-        box-shadow: 
-            0 20px 40px rgba(40, 167, 69, 0.6),
-            0 0 50px rgba(40, 167, 69, 0.4) !important;
-        animation: pulse 2s infinite;
-        position: relative;
-    }
-    
-    .today::after {
-        content: '🎯';
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 1rem;
-        animation: spin 3s linear infinite;
-    }
-    
-    .holiday {
-        background: linear-gradient(145deg, #dc3545, #fd7e14) !important;
-        color: white !important;
-        font-weight: bold !important;
-        position: relative;
-    }
-    
-    .holiday::after {
-        content: '🎉';
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 1rem;
-        animation: bounce 1s infinite;
-    }
-    
-    .weekend {
-        background: linear-gradient(145deg, #e3f2fd, #bbdefb);
-        color: #1976d2;
-        position: relative;
-    }
-    
-    .weekend::after {
-        content: '🌅';
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 1rem;
-        animation: float 2s ease-in-out infinite;
-    }
-    
-    .other-month {
-        color: #adb5bd;
-        background: #f8f9fa;
-        opacity: 0.3;
-    }
-    
-    .lunar-phase {
-        font-size: 0.8rem;
-        margin-top: 0.3rem;
-        opacity: 0.9;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    .weather-icon {
-        font-size: 0.9rem;
-        margin-top: 0.3rem;
-        animation: weather-float 3s ease-in-out infinite;
-    }
-    
-    .stats-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 4rem;
-        border-radius: 30px;
-        margin-top: 4rem;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 
-            0 30px 60px rgba(102, 126, 234, 0.4),
-            0 0 100px rgba(102, 126, 234, 0.2);
-    }
-    
-    .stats-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stats-pattern" width="60" height="60" patternUnits="userSpaceOnUse"><circle cx="30" cy="30" r="1" fill="white" opacity="0.1"/><circle cx="10" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="50" cy="50" r="0.8" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23stats-pattern)"/></svg>');
-        pointer-events: none;
-    }
-    
-    .stats-grid {
+    .pixel-legend-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 2.5rem;
-        margin-top: 3rem;
-        position: relative;
-        z-index: 1;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.5rem;
     }
     
-    .stat-item {
-        background: rgba(255,255,255,0.2);
-        padding: 2.5rem;
-        border-radius: 25px;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.3);
-        transition: all 0.4s ease;
-    }
-    
-    .stat-item:hover {
-        transform: translateY(-8px);
-        background: rgba(255,255,255,0.3);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    }
-    
-    .stat-item h4 {
-        margin: 0 0 1.5rem 0;
-        font-size: 1.4rem;
-        font-weight: 700;
-        font-family: 'Orbitron', monospace;
-        letter-spacing: 1px;
-    }
-    
-    .stat-item p {
-        margin: 0;
-        font-size: 1.8rem;
-        font-weight: 800;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    .legend-container {
-        background: linear-gradient(145deg, #ffffff, #f8f9fa);
-        padding: 3rem;
-        border-radius: 25px;
-        margin-top: 3rem;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        border: 1px solid rgba(102, 126, 234, 0.1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .legend-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
-        border-radius: 25px 25px 0 0;
-    }
-    
-    .dark-mode .legend-container {
-        background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .legend-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-    }
-    
-    .legend-item {
+    .pixel-legend-item {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: #000;
+        border: 1px solid #00ff00;
+    }
+    
+    .pixel-legend-color {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #00ff00;
+    }
+    
+    .pixel-legend-color.today { background: #00ff00; }
+    .pixel-legend-color.holiday { background: #ff0000; }
+    .pixel-legend-color.weekend { background: #0080ff; }
+    .pixel-legend-color.normal { background: #1a1a1a; }
+    .pixel-legend-color.selected { background: #ff0000; }
+    
+    .pixel-legend-item span {
+        color: #00ff00;
+        font-size: 0.9rem;
+    }
+    
+    .pixel-info {
+        background: #1a1a1a;
+        border: 2px solid #00ff00;
         padding: 1rem;
-        border-radius: 15px;
-        background: rgba(102, 126, 234, 0.1);
-        transition: all 0.3s ease;
+        margin-top: 1rem;
+        box-shadow: 3px 3px 0px #00ff00;
     }
     
-    .legend-item:hover {
-        background: rgba(102, 126, 234, 0.2);
-        transform: translateX(5px);
+    .pixel-info h4 {
+        color: #00ff00;
+        margin: 0 0 0.5rem 0;
     }
     
-    .legend-color {
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        border: 3px solid rgba(255,255,255,0.4);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    
-    /* Анимации */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(60px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes shimmer {
-        0% { transform: translateX(-100%) rotate(45deg); }
-        100% { transform: translateX(100%) rotate(45deg); }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.08); }
-    }
-    
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-15px); }
-    }
-    
-    @keyframes bounce {
-        0%, 20%, 53%, 80%, 100% { transform: scale(1.15); }
-        40%, 43% { transform: scale(1.2); }
-        70% { transform: scale(1.1); }
-        90% { transform: scale(1.15); }
-    }
-    
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
-    @keyframes gradient-shift {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-    
-    @keyframes weather-float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-3px); }
-    }
-    
-    /* Звуковые эффекты */
-    .sound-wave {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: inherit;
-        background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
-        animation: sound-wave 0.5s ease-out;
-        pointer-events: none;
-    }
-    
-    @keyframes sound-wave {
-        0% {
-            transform: scale(0);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(2);
-            opacity: 0;
-        }
+    .pixel-info p {
+        color: #fff;
+        margin: 0;
+        font-size: 0.9rem;
     }
     
     @media (max-width: 768px) {
-        .calendar-grid {
-            gap: 8px;
+        .pixel-grid {
+            gap: 1px;
         }
         
-        .calendar-day {
-            padding: 1rem 0.3rem;
-            min-height: 70px;
-            font-size: 1.1rem;
+        .pixel-day {
+            padding: 0.5rem 0.25rem;
+            min-height: 50px;
+            font-size: 0.9rem;
         }
         
-        .main-header h1 {
-            font-size: 3rem;
-        }
-        
-        .controls-container {
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .stats-grid {
-            grid-template-columns: 1fr;
+        .pixel-header h1 {
+            font-size: 2rem;
         }
     }
 </style>
@@ -721,29 +280,29 @@ def get_holidays(year, month):
     return holidays.get(month, [])
 
 def get_lunar_phase(day):
-    """Возвращает фазу луны для дня (упрощенная версия)"""
+    """Возвращает фазу луны для дня"""
     phases = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
     return phases[day % 8]
 
 def get_weather_icon(day):
-    """Возвращает иконку погоды (упрощенная версия)"""
-    weather = ["☀️", "⛅", "🌤️", "🌥️", "☁️", "🌦️", "🌧️", "⛈️", "🌈", "❄️"]
+    """Возвращает иконку погоды"""
+    weather = ["☀️", "⛅", "🌤️", "🌥️", "☁️", "🌦️", "🌧️", "⛈️"]
     return weather[day % len(weather)]
 
 def get_zodiac_sign(month, day):
     """Возвращает знак зодиака"""
     zodiac_signs = [
-        (1, 20, "♒ Водолей"), (2, 19, "♓ Рыбы"), (3, 21, "♈ Овен"),
-        (4, 20, "♉ Телец"), (5, 21, "♊ Близнецы"), (6, 21, "♋ Рак"),
-        (7, 23, "♌ Лев"), (8, 23, "♍ Дева"), (9, 23, "♎ Весы"),
-        (10, 23, "♏ Скорпион"), (11, 22, "♐ Стрелец"), (12, 22, "♑ Козерог")
+        (1, 20, "♒"), (2, 19, "♓"), (3, 21, "♈"),
+        (4, 20, "♉"), (5, 21, "♊"), (6, 21, "♋"),
+        (7, 23, "♌"), (8, 23, "♍"), (9, 23, "♎"),
+        (10, 23, "♏"), (11, 22, "♐"), (12, 22, "♑")
     ]
     
     for i, (start_month, start_day, sign) in enumerate(zodiac_signs):
         next_month, next_day, _ = zodiac_signs[(i + 1) % 12]
         if (month == start_month and day >= start_day) or (month == next_month and day < next_day):
             return sign
-    return "♑ Козерог"
+    return "♑"
 
 def create_month_calendar_html(year, month):
     """Создает HTML календарь для месяца"""
@@ -752,39 +311,39 @@ def create_month_calendar_html(year, month):
     holidays = get_holidays(year, month)
     
     html = f"""
-    <div class="calendar-container">
-        <div class="month-header">
-            <h2>{month_name} {year}</h2>
+    <div class="pixel-container">
+        <div class="pixel-month-header">
+            {month_name} {year}
         </div>
-        <div class="calendar-grid">
+        <div class="pixel-grid">
     """
     
     # Заголовки дней недели
-    weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    weekdays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
     for day in weekdays:
-        html += f'<div class="weekday-header">{day}</div>'
+        html += f'<div class="pixel-weekday">{day}</div>'
     
     # Дни месяца
     today = datetime.now()
     for week in cal:
         for day in week:
             if day == 0:
-                html += '<div class="calendar-day other-month"></div>'
+                html += '<div class="pixel-day pixel-other-month"></div>'
             else:
-                day_classes = ["calendar-day"]
+                day_classes = ["pixel-day"]
                 
                 # Проверяем, является ли это сегодняшним днем
                 if year == today.year and month == today.month and day == today.day:
-                    day_classes.append("today")
+                    day_classes.append("pixel-today")
                 
                 # Проверяем, является ли это праздником
                 if day in holidays:
-                    day_classes.append("holiday")
+                    day_classes.append("pixel-holiday")
                 
-                # Проверяем, является ли это выходным (суббота или воскресенье)
+                # Проверяем, является ли это выходным
                 weekday = date(year, month, day).weekday()
-                if weekday >= 5:  # 5 = суббота, 6 = воскресенье
-                    day_classes.append("weekend")
+                if weekday >= 5:
+                    day_classes.append("pixel-weekend")
                 
                 # Проверяем, выбран ли этот день
                 if st.session_state.selected_date and st.session_state.selected_date == (year, month, day):
@@ -799,10 +358,10 @@ def create_month_calendar_html(year, month):
                 
                 html += f'''
                 <div class="{class_str}" onclick="selectDate({year}, {month}, {day})">
-                    {day}
-                    <div class="lunar-phase">{lunar_phase}</div>
-                    <div class="weather-icon">{weather_icon}</div>
-                    <div class="zodiac-sign" style="font-size: 0.6rem; margin-top: 0.2rem; opacity: 0.7;">{zodiac_sign.split()[0]}</div>
+                    <div style="font-size: 1.1rem; font-weight: bold;">{day}</div>
+                    <div style="font-size: 0.7rem; margin-top: 2px;">{lunar_phase}</div>
+                    <div style="font-size: 0.7rem;">{weather_icon}</div>
+                    <div style="font-size: 0.6rem; margin-top: 2px;">{zodiac_sign}</div>
                 </div>
                 '''
     
@@ -816,81 +375,41 @@ def create_year_calendar_html(year):
         html += create_month_calendar_html(year, month)
     return html
 
-# Упрощенный JavaScript для Streamlit
+# Простой JavaScript
 st.markdown("""
 <script>
-// Простая функция для выбора даты
 function selectDate(year, month, day) {
-    // Визуальный эффект
-    const element = event.target;
-    element.style.transform = 'scale(1.1)';
+    console.log('Selected:', year, month, day);
+    // Простой визуальный эффект
+    event.target.style.transform = 'scale(1.1)';
     setTimeout(() => {
-        element.style.transform = 'scale(1)';
+        event.target.style.transform = 'scale(1)';
     }, 200);
-    
-    // Отправляем данные в Streamlit (упрощенная версия)
-    console.log('Selected date:', year, month, day);
 }
-
-// Создание частиц (упрощенная версия)
-function createParticles() {
-    const particlesContainer = document.createElement('div');
-    particlesContainer.className = 'particles';
-    document.body.appendChild(particlesContainer);
-    
-    for (let i = 0; i < 20; i++) {
-        setTimeout(() => {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDelay = Math.random() * 6 + 's';
-            particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
-            particlesContainer.appendChild(particle);
-            
-            setTimeout(() => {
-                if (particle.parentNode) {
-                    particle.remove();
-                }
-            }, 6000);
-        }, i * 200);
-    }
-}
-
-// Запуск частиц каждые 15 секунд
-setInterval(createParticles, 15000);
-setTimeout(createParticles, 2000); // Первый запуск через 2 секунды
 </script>
 """, unsafe_allow_html=True)
 
 # Главный заголовок
 st.markdown("""
-<div class="main-header">
+<div class="pixel-header">
     <h1>📅 КАЛЕНДАРЬ 2025</h1>
-    <p>ULTIMATE EDITION - Интерактивный календарь с 3D эффектами и анимациями</p>
+    <p>PIXEL EDITION - Минималистичный календарь в стиле ретро</p>
 </div>
 """, unsafe_allow_html=True)
 
 # Панель управления
 with st.container():
-    st.markdown('<div class="controls-container">', unsafe_allow_html=True)
+    st.markdown('<div class="pixel-controls">', unsafe_allow_html=True)
     
-    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+    col1, col2 = st.columns([3, 1])
     
     with col1:
         option = st.radio("Что показать?", ["Весь год", "Один месяц"])
     
     with col2:
-        if st.button("🌙 Темная тема" if not st.session_state.dark_mode else "☀️ Светлая тема"):
-            st.session_state.dark_mode = not st.session_state.dark_mode
-    
-    with col3:
         if st.button("🎲 Случайный месяц"):
             random_month = random.randint(1, 12)
             st.session_state.random_month = random_month
-    
-    with col4:
-        if st.button("🧘 Zen режим" if not st.session_state.zen_mode else "🎨 Обычный режим"):
-            st.session_state.zen_mode = not st.session_state.zen_mode
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -909,40 +428,32 @@ elif option == "Один месяц":
 
 # Статистика года
 st.markdown("""
-<div class="stats-container">
-    <h3>📊 СТАТИСТИКА 2025 ГОДА</h3>
-    <div class="stats-grid">
-        <div class="stat-item">
-            <h4>📅 Всего дней</h4>
-            <p>365 дней</p>
+<div class="pixel-stats">
+    <h3>📊 СТАТИСТИКА 2025</h3>
+    <div class="pixel-stats-grid">
+        <div class="pixel-stat-item">
+            <h4>📅 Дней</h4>
+            <p>365</p>
         </div>
-        <div class="stat-item">
-            <h4>🎯 Текущий год</h4>
+        <div class="pixel-stat-item">
+            <h4>🎯 Год</h4>
             <p>2025</p>
         </div>
-        <div class="stat-item">
+        <div class="pixel-stat-item">
             <h4>🎉 Праздники</h4>
-            <p>8 официальных</p>
+            <p>8</p>
         </div>
-        <div class="stat-item">
-            <h4>⭐ Особый год</h4>
-            <p>Год технологий</p>
-        </div>
-        <div class="stat-item">
+        <div class="pixel-stat-item">
             <h4>🌙 Фазы луны</h4>
-            <p>12 полных</p>
+            <p>12</p>
         </div>
-        <div class="stat-item">
+        <div class="pixel-stat-item">
             <h4>🌤️ Погода</h4>
-            <p>365 дней</p>
+            <p>365</p>
         </div>
-        <div class="stat-item">
+        <div class="pixel-stat-item">
             <h4>♈ Знаки зодиака</h4>
-            <p>12 знаков</p>
-        </div>
-        <div class="stat-item">
-            <h4>🎵 Звуки</h4>
-            <p>Интерактивные</p>
+            <p>12</p>
         </div>
     </div>
 </div>
@@ -950,40 +461,28 @@ st.markdown("""
 
 # Легенда
 st.markdown("""
-<div class="legend-container">
-    <h4>🎨 ЛЕГЕНДА КАЛЕНДАРЯ</h4>
-    <div class="legend-grid">
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #28a745, #20c997);"></div>
-            <span>🎯 Сегодня - зеленый с пульсацией</span>
+<div class="pixel-legend">
+    <h4>🎨 ЛЕГЕНДА</h4>
+    <div class="pixel-legend-grid">
+        <div class="pixel-legend-item">
+            <div class="pixel-legend-color today"></div>
+            <span>🎯 Сегодня</span>
         </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #dc3545, #fd7e14);"></div>
-            <span>🎉 Праздники - красный градиент</span>
+        <div class="pixel-legend-item">
+            <div class="pixel-legend-color holiday"></div>
+            <span>🎉 Праздники</span>
         </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #e3f2fd, #bbdefb);"></div>
-            <span>🌅 Выходные - синий градиент</span>
+        <div class="pixel-legend-item">
+            <div class="pixel-legend-color weekend"></div>
+            <span>🌅 Выходные</span>
         </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #f8f9fa, #e9ecef);"></div>
-            <span>📅 Обычные дни - серый градиент</span>
+        <div class="pixel-legend-item">
+            <div class="pixel-legend-color normal"></div>
+            <span>📅 Обычные дни</span>
         </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #ff6b6b, #ee5a24);"></div>
-            <span>🎯 Выбранный день - оранжевый</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: transparent; border: 3px solid #667eea;"></div>
-            <span>🌙 Фазы луны и погода</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #9c27b0, #673ab7);"></div>
-            <span>♈ Знаки зодиака</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(145deg, #00bcd4, #009688);"></div>
-            <span>🎵 Звуковые эффекты</span>
+        <div class="pixel-legend-item">
+            <div class="pixel-legend-color selected"></div>
+            <span>🎯 Выбранный</span>
         </div>
     </div>
 </div>
@@ -994,26 +493,14 @@ if st.session_state.selected_date:
     year, month, day = st.session_state.selected_date
     zodiac_sign = get_zodiac_sign(month, day)
     
-    st.success(f"📅 Выбрана дата: {day} {calendar.month_name[month]} {year}")
-    st.info(f"🌙 Фаза луны: {get_lunar_phase(day)} | 🌤️ Погода: {get_weather_icon(day)} | {zodiac_sign}")
+    st.markdown(f"""
+    <div class="pixel-info">
+        <h4>📅 Выбрана дата: {day} {calendar.month_name[month]} {year}</h4>
+        <p>🌙 Фаза луны: {get_lunar_phase(day)} | 🌤️ Погода: {get_weather_icon(day)} | {zodiac_sign}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Дополнительные функции
-st.markdown("---")
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("🎵 Включить звуки" if not st.session_state.sound_enabled else "🔇 Выключить звуки"):
-        st.session_state.sound_enabled = not st.session_state.sound_enabled
-
-with col2:
-    if st.button("✨ Частицы" if not st.session_state.particle_mode else "💫 Без частиц"):
-        st.session_state.particle_mode = not st.session_state.particle_mode
-
-with col3:
-    if st.button("🔮 Голографический режим" if not st.session_state.holographic_mode else "📱 Обычный режим"):
-        st.session_state.holographic_mode = not st.session_state.holographic_mode
-
-# Тестовое сообщение для проверки работы
-st.success("✅ Календарь успешно загружен и готов к работе!")
-st.info("🎯 Все функции протестированы и совместимы со Streamlit")
+# Тестовое сообщение
+st.success("✅ Календарь загружен!")
+st.info("🎮 Пиксельный стиль готов к работе")
 
