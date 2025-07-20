@@ -238,10 +238,15 @@ if option == "Весь год":
         st.markdown('</div>', unsafe_allow_html=True)
 
 elif option == "Один месяц":
+    # Исправляем проблему с индексом
+    random_month_index = getattr(st.session_state, 'random_month', 1) - 1
+    # Убеждаемся, что индекс в допустимых пределах
+    random_month_index = max(0, min(11, random_month_index))
+    
     month = st.selectbox("Выберите месяц", 
                         list(range(1, 13)), 
                         format_func=lambda x: calendar.month_name[x],
-                        index=getattr(st.session_state, 'random_month', 0) - 1)
+                        index=random_month_index)
     
     st.markdown('<div class="calendar-container">', unsafe_allow_html=True)
     display_month_calendar(year, month)
