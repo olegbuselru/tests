@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Echoes of the Rift</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas" width="1280" height="720" aria-label="Игровая сцена"></canvas>
+
+    <div id="title-screen" class="screen active">
+      <h1>Echoes of the Rift</h1>
+      <p class="subtitle">Ты умер в сером мире. Проснулся — в мире, который помнит твое имя.</p>
+      <div class="menu-panel">
+        <button data-action="new-game">New Game</button>
+        <button data-action="continue">Continue</button>
+        <button data-action="settings">Settings</button>
+      </div>
+    </div>
+
+    <div id="settings-panel" class="panel hidden">
+      <h2>Настройки</h2>
+      <label>Музыка <input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>SFX <input id="sfx-volume" type="range" min="0" max="1" step="0.01" value="0.7"></label>
+      <button data-action="close-settings">Закрыть</button>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="stats-card">
+          <div>HP <span id="hp-value"></span></div>
+          <div class="bar"><span id="hp-bar"></span></div>
+          <div>Mana <span id="mana-value"></span></div>
+          <div class="bar mana"><span id="mana-bar"></span></div>
+          <div>LV <span id="lv-value"></span> | XP <span id="xp-value"></span></div>
+        </div>
+        <div class="quest-card" id="active-quest"></div>
+      </div>
+      <div class="hud-bottom">
+        <button data-action="attack">Атака [J]</button>
+        <button data-action="ability">Способность [K]</button>
+        <button data-action="interact">Взаимодействие [E]</button>
+        <button data-action="inventory">Инвентарь [I]</button>
+        <button data-action="journal">Журнал [L]</button>
+      </div>
+      <div id="context-hint"></div>
+    </div>
+
+    <div id="dialogue-panel" class="panel hidden" aria-live="polite">
+      <h3 id="dialogue-speaker"></h3>
+      <p id="dialogue-text"></p>
+      <div id="dialogue-choices"></div>
+      <small>Space: ускорить/пропустить печать</small>
+    </div>
+
+    <div id="class-panel" class="panel hidden">
+      <h2>Выбери стартовый класс</h2>
+      <div id="class-options"></div>
+    </div>
+
+    <div id="inventory-panel" class="panel hidden"><h2>Инвентарь</h2><ul id="inventory-list"></ul></div>
+    <div id="journal-panel" class="panel hidden"><h2>Журнал квестов</h2><ul id="journal-list"></ul></div>
+
+    <div id="pause-panel" class="panel hidden">
+      <h2>Пауза</h2>
+      <button data-action="resume">Продолжить</button>
+      <button data-action="to-title">В главное меню</button>
+    </div>
+
+    <div id="death-screen" class="screen hidden">
+      <h2>Нить оборвалась</h2>
+      <p>Эхо мира затихло... пока что.</p>
+      <button data-action="restart">Переродиться снова</button>
+    </div>
+
+    <div id="chapter-screen" class="screen hidden">
+      <h2 id="chapter-title"></h2>
+      <p id="chapter-text"></p>
+      <button data-action="chapter-continue">Продолжить</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
